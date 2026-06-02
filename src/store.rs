@@ -15,8 +15,7 @@ impl Store {
         if let Ok(file) = File::open(path) {
             let reader = BufReader::new(file);
             // TODO: uncomment once load_from_reader is implemented
-            // Self::load_from_reader(reader, &mut data);
-            let _ = reader; // remove this line when you uncomment above
+            Self::load_from_reader(reader, &mut data);
         }
 
         let log = OpenOptions::new().create(true).append(true).open(path)?;
@@ -32,26 +31,37 @@ impl Store {
         // match "SET" → insert into data
         // match "DEL" → remove from data
         // ignore anything else (corrupt lines)
+        for line in _reader.lines().flatten() {
+            match line.splitln(3, ' ').collect().as_slice() {
+                ["SET", key, value] => { self.data.insert(key.to_string(), value.to_string()); },
+                ["DEL", key]        => { self.data.del(key.to_string); }
+                _                   => {}
+            } 
+        } 
     }
 
     /// Insert key → value and append `SET key value` to the log.
     pub fn set(&mut self, key: String, value: String) -> io::Result<()> {
-        // TODO: self.data.insert(...)
-        // TODO: writeln!(self.log, "SET {key} {value}")?;
-        // TODO: self.log.flush()?;
-        todo!("implement set")
+        writeln!(self.log, "SET {key} {value}")?;
+        self.log.flush()?;
+        self.data.insert(key, value);
+        Ok(())
     }
 
     /// Look up a key. Returns None if not present.
     pub fn get(&self, key: &str) -> Option<&String> {
-        // TODO: self.data.get(key)
-        todo!("implement get")
+        self.data.get(key)
     }
 
     /// Remove a key. Appends `DEL key` to the log. Returns true if key existed.
     pub fn del(&mut self, key: &str) -> io::Result<bool> {
         // TODO: remove from data, check if it existed
         // TODO: if it existed, append DEL line to log
-        todo!("implement del")
+        let existed = self.data.del(key).is_some();
+        if existed {
+            writeln!(self.log, "DEL {key}")?;
+            self.log.flush()?;
+        }
+        Ok(existed)
     }
 }
