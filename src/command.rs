@@ -15,6 +15,12 @@ impl Command {
             // "SET foo bar" → Set { key: "foo", value: "bar" }
             // "GET foo"     → Get { key: "foo" }
             // "DEL foo"     → Del { key: "foo" }
+            [cmd, key, value] if cmd.eq_ignore_ascii_case("SET") =>
+                Command::Set { key: key.to_string(), value: value.to_string() },
+            [cmd, key] if cmd.eq_ignore_ascii_case("GET") =>
+                Command::Get { key: key.to_string() },
+            [cmd, key] if cmd.eq_ignore_ascii_case("DEL") =>
+                Command::Del { key: key.to_string() },
             _ => Command::Unknown(input.trim().to_string()),
         }
     }
@@ -27,34 +33,34 @@ mod tests {
     #[test]
     fn test_parse_set() {
         // TODO: uncomment once parse() is implemented
-        // assert_eq!(
-        //     Command::parse("SET foo bar"),
-        //     Command::Set { key: "foo".into(), value: "bar".into() }
-        // );
+         assert_eq!(
+             Command::parse("SET foo bar"),
+             Command::Set { key: "foo".into(), value: "bar".into() }
+         );
     }
 
     #[test]
     fn test_parse_get() {
-        // assert_eq!(
-        //     Command::parse("GET foo"),
-        //     Command::Get { key: "foo".into() }
-        // );
+         assert_eq!(
+             Command::parse("GET foo"),
+             Command::Get { key: "foo".into() }
+         );
     }
 
     #[test]
     fn test_parse_del() {
-        // assert_eq!(
-        //     Command::parse("DEL foo"),
-        //     Command::Del { key: "foo".into() }
-        // );
+         assert_eq!(
+             Command::parse("DEL foo"),
+             Command::Del { key: "foo".into() }
+         );
     }
 
     #[test]
     fn test_parse_case_insensitive() {
-        // assert_eq!(
-        //     Command::parse("set FOO bar"),
-        //     Command::Set { key: "FOO".into(), value: "bar".into() }
-        // );
+         assert_eq!(
+             Command::parse("set FOO bar"),
+             Command::Set { key: "FOO".into(), value: "bar".into() }
+         );
     }
 
     #[test]
