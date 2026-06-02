@@ -32,9 +32,9 @@ impl Store {
         // match "DEL" → remove from data
         // ignore anything else (corrupt lines)
         for line in _reader.lines().flatten() {
-            match line.splitln(3, ' ').collect().as_slice() {
-                ["SET", key, value] => { self.data.insert(key.to_string(), value.to_string()); },
-                ["DEL", key]        => { self.data.del(key.to_string); }
+            match line.splitn(3, ' ').collect().as_slice() {
+                ["SET", key, value] => { _data.insert(key.to_string(), value.to_string()); },
+                ["DEL", key]        => { _data.del(key.to_string); }
                 _                   => {}
             } 
         } 
