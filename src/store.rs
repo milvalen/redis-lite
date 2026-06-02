@@ -65,3 +65,108 @@ impl Store {
         Ok(existed)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    fn temp_path(name: &str) -> String {
+        format!("/tmp/redis-lite-test-{name}.log")
+    }
+
+    // load_from_reader tests use Cursor as a fake in-memory file — no disk needed
+
+    #[test]
+    fn test_load_set_lines() {
+        let input = b"SET foo bar\nSET hello world\n";
+        let mut data = HashMap::new();
+        Store::load_from_reader(Cursor::new(input), &mut data);
+        assert_eq!(data.get("foo"), Some(&"bar".to_string()));
+        assert_eq!(data.get("hello"), Some(&"world".to_string()));
+    }
+
+    #[test]
+    fn test_load_del_removes_key() {
+        let input = b"SET foo bar\nDEL foo\n";
+        let mut data = HashMap::new();
+        Store::load_from_reader(Cursor::new(input), &mut data);
+        assert_eq!(data.get("foo"), None);
+    }
+
+    #[test]
+    fn test_load_ignores_corrupt_lines() {
+        let input = b"SET foo bar\nGARBAGE\nDEL\n";
+        let mut data = HashMap::new();
+        Store::load_from_reader(Cursor::new(input), &mut data);
+        assert_eq!(data.get("foo"), Some(&"bar".to_string()));
+    }
+
+    #[test]
+    fn test_set_and_get() {
+        let path = temp_path("set_get");
+        let _ = std::fs::remove_file(&path);
+        let mut store = Store::open(&path).unwrap();
+        store.set("foo".into(), "bar".into()).unwrap();
+        assert_eq!(store.get("foo"), Some(&"bar".to_string()));
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_get_missing_key() {
+        let path = temp_path("get_missing");
+        let _ = std::fs::remove_file(&path);
+        let store = Store::open(&path).unwrap();
+        assert_eq!(store.get("nonexistent"), None);
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_del_existing_key() {
+        let path = temp_path("del_existing");
+        let _ = std::fs::remove_file(&path);
+        let mut store = Store::open(&path).unwrap();
+        store.set("foo".into(), "bar".into()).unwrap();
+        assert_eq!(store.del("foo").unwrap(), true);
+        assert_eq!(store.get("foo"), None);
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_del_missing_key() {
+        let path = temp_path("del_missing");
+        let _ = std::fs::remove_file(&path);
+        let mut store = Store::open(&path).unwrap();
+        assert_eq!(store.del("nonexistent").unwrap(), false);
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_set_overwrites_existing_key() {
+        let path = temp_path("overwrite");
+        let _ = std::fs::remove_file(&path);
+        let mut store = Store::open(&path).unwrap();
+        store.set("foo".into(), "bar".into()).unwrap();
+        store.set("foo".into(), "baz".into()).unwrap();
+        assert_eq!(store.get("foo"), Some(&"baz".to_string()));
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_data_survives_reopen() {
+        let path = temp_path("persistence");
+        let _ = std::fs::remove_file(&path);
+
+        {
+            let mut store = Store::open(&path).unwrap();
+            store.set("foo".into(), "bar".into()).unwrap();
+            store.set("hello".into(), "world".into()).unwrap();
+            store.del("foo").unwrap();
+        }
+
+        let store = Store::open(&path).unwrap();
+        assert_eq!(store.get("foo"), None);
+        assert_eq!(store.get("hello"), Some(&"world".to_string()));
+        let _ = std::fs::remove_file(&path);
+    }
+}
