@@ -35,8 +35,8 @@ impl Store {
             let parts: Vec<&str> = line.splitn(3, ' ').collect();
 
             match parts.as_slice() {
-                ["SET", key, value] => { _data.insert(key.to_string(), value.to_string()); },
-                ["DEL", key]        => { _data.remove(&key.to_string()); }
+                ["SET", key, value] => { _data.insert(key, value); },
+                ["DEL", key]        => { _data.remove(&key); }
                 _                   => {}
             } 
         } 
