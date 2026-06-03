@@ -32,9 +32,11 @@ impl Store {
         // match "DEL" → remove from data
         // ignore anything else (corrupt lines)
         for line in _reader.lines().flatten() {
-            match line.splitn(3, ' ').collect().as_slice() {
+            let parts: Vec<&str> = line.splitn(3, ' ').collect();
+
+            match parts.as_slice() {
                 ["SET", key, value] => { _data.insert(key.to_string(), value.to_string()); },
-                ["DEL", key]        => { _data.del(key.to_string); }
+                ["DEL", key]        => { _data.remove(&key.to_string()); }
                 _                   => {}
             } 
         } 
@@ -57,7 +59,7 @@ impl Store {
     pub fn del(&mut self, key: &str) -> io::Result<bool> {
         // TODO: remove from data, check if it existed
         // TODO: if it existed, append DEL line to log
-        let existed = self.data.del(key).is_some();
+        let existed = self.data.remove(key).is_some();
         if existed {
             writeln!(self.log, "DEL {key}")?;
             self.log.flush()?;
